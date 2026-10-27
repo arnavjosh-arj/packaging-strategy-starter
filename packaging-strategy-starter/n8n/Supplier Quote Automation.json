@@ -1,0 +1,393 @@
+{
+  "name": "Supplier Quote Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Contact Us",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Supplier",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Current Price",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Quoted Price",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Quote Notes",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "022135ba-1929-47a8-8201-64f4d7426ab7",
+      "name": "On form submission",
+      "webhookId": "db9322e2-1f73-4bb9-930f-1a3750eacf24"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "81317ac8-4aec-4b74-8a92-6d63b3131517",
+              "name": "premiumPct",
+              "value": "={{ Math.round(($json['Quoted Price'] - $json['Current Price']) / $json['Current Price'] * 1000) / 10 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "d3d3785c-e815-43ff-a721-2a481f6a689d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Supplier: {{ $json.Supplier }}\nCurrent price per unit: ${{ $json[\"Current Price\"] }}\nQuoted price per unit: ${{ $json[\"Quoted Price\"] }}\nPremium over current price: {{ $json.premiumPct }}%\nQuote notes: {{ $json[\"Quote Notes\"] }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a procurement analyst assistant. In 2 to 3 plain sentences, brief a finance reviewer on this supplier quote. State the price premium percentage. If the notes mention a certification, say whether it is third-party verified or self-reported, and flag it if it is self-reported. Do not invent facts."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        448,
+        0
+      ],
+      "id": "eb75ad1b-2c4b-41a2-9b9f-d9d10fd2e609",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        384,
+        208
+      ],
+      "id": "2b9db643-a082-48c8-b6ff-ba91ae857436",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "cXcK923Cbtz7uktP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e04a619f-3f86-4d4f-9d4b-04e6cf55e699",
+              "leftValue": "={{ $('Edit Fields').item.json.premiumPct }}",
+              "rightValue": 15,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        0
+      ],
+      "id": "52416f03-2ce8-4625-854b-72f03a488ff5",
+      "name": "Over 15%?"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Premium Approval",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Reject"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Comment",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "78f8aaf6-da5e-4654-90df-d94281c0c029",
+      "name": "Human Approval",
+      "webhookId": "19298da6-3774-4279-9eab-a5eb8d599951"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ACfGWqlLjf0DzSg9_0Q9lAM98vX929dguq2LFWjinp4",
+          "mode": "list",
+          "cachedResultName": "Supplier Quote Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ACfGWqlLjf0DzSg9_0Q9lAM98vX929dguq2LFWjinp4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ACfGWqlLjf0DzSg9_0Q9lAM98vX929dguq2LFWjinp4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Supplier": "={{ $('Edit Fields').item.json.Supplier }}",
+            "Current Price": "={{ $('Edit Fields').item.json[\"Current Price\"] }}",
+            "Quoted Price": "={{ $('Edit Fields').item.json[\"Quoted Price\"] }}",
+            "Premium %": "={{ $('Edit Fields').item.json.premiumPct }}",
+            "AI Briefing": "={{ $('Basic LLM Chain').item.json.text }}",
+            "Status": "={{ $json.Decision || 'Auto-approved' }}",
+            "Reviewer Comment": "={{ $json.Comment || '' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Supplier",
+              "displayName": "Supplier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Current Price",
+              "displayName": "Current Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quoted Price",
+              "displayName": "Quoted Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Premium %",
+              "displayName": "Premium %",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Briefing",
+              "displayName": "AI Briefing",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reviewer Comment",
+              "displayName": "Reviewer Comment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1040,
+        96
+      ],
+      "id": "6fdd6416-2c1f-4372-9f6e-f79573d26a06",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YWwtIcediJSkkFjd",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Over 15%?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Over 15%?": {
+      "main": [
+        [
+          {
+            "node": "Human Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Approval": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5a796cce-6513-4dc2-adac-a30bb09063fa",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3708077529c1a36db58d7ba7d9d2fc4f9291bed8643e1dc5ac8c7e6f7d8867b7"
+  },
+  "nodeGroups": [],
+  "id": "Op3Rp4raFGbhd3s0",
+  "tags": []
+}
